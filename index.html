@@ -26,20 +26,17 @@
             margin: 0; padding: 15px; color: var(--text-dark);
             min-height: 100vh;
             position: relative;
-            /* 這裡設定一個與圖片風格相近的底色，防止圖片沒填滿時出現突兀的顏色 */
-            background-color: #000; 
+            background-color: #f0f2f5;
         }
         
         #bg-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: -1;
-            /* 修改點：改用 contain 確保 9:16 比例完整顯示不被裁切 */
-            background-size: contain; 
-            background-repeat: no-repeat;
+            background-size: cover;
             background-position: center;
             transition: background-image 0.5s ease-in-out;
-            opacity: 1.0; /* 既然要完整呈現，透明度調到最高效果最好 */
+            opacity: 0.8; /* 提高背景圖片亮度，因為容器變透了 */
         }
 
         .container { 
@@ -121,17 +118,20 @@
 
 <div class="container">
     <div id="timer-display">0</div>
+
     <div id="p-main" class="page active">
         <h2 style="font-size: 28px;">😈 all in one</h2>
         <button style="background:var(--primary); color:white; border:none; padding: 20px;" onclick="go('p-mode')">開始遊戲</button>
         <button onclick="go('p-mgr')">⚙️ 題庫管理 / 備份</button>
     </div>
+
     <div id="p-mode" class="page">
         <h2>請選擇遊戲模式</h2>
         <button style="border-color: var(--primary); color: var(--primary);" onclick="setGameMode('choice')">🅰️ 英翻中選擇</button>
         <button style="border-color: var(--success); color: var(--success);" onclick="setGameMode('input')">✍️ 中翻英填充</button>
         <button onclick="go('p-main')" style="margin-top: 10px; font-size: 14px;">返回主畫面</button>
     </div>
+
     <div id="p-sel" class="page">
         <h2 id="sel-title-text">設定測驗</h2>
         <div id="sel-list"></div>
@@ -150,6 +150,7 @@
         </div>
         <button onclick="go('p-mode')" style="margin-top:10px;">返回</button>
     </div>
+
     <div id="p-quiz" class="page">
         <div class="progress-bar"><div id="progress-fill"></div></div>
         <div id="q-info" style="text-align:center; font-weight:800; font-size:18px; margin-bottom: 10px;"></div>
@@ -175,6 +176,7 @@
         </div>
         <button onclick="if(confirm('結束測驗？')) go('p-main')" style="margin-top:30px; font-size:14px; opacity:0.6; border:none;">結束遊戲</button>
     </div>
+
     <div id="p-result" class="page">
         <h2>🎉 測驗完成</h2>
         <div class="stat-card">
@@ -188,6 +190,7 @@
         </div>
         <button onclick="go('p-main')" style="background:var(--primary); color:white; border:none;">返回主選單</button>
     </div>
+
     <div id="p-mgr" class="page">
         <h2>🗂 題庫管理</h2>
         <input type="text" id="db-in" placeholder="輸入新題庫名稱">
@@ -199,12 +202,14 @@
         </div>
         <button onclick="go('p-main')">返回</button>
     </div>
+
     <div id="p-edit" class="page">
         <h2 id="edit-title">編輯中</h2>
         <div class="legend">
             <div class="legend-item"><div class="stat-box stat-choice" style="width:20px; height:20px;"></div> 選擇題答對率</div>
             <div class="legend-item"><div class="stat-box stat-input" style="width:20px; height:20px;"></div> 填充題答對率</div>
         </div>
+        
         <div id="single-edit-area">
             <input type="text" id="w-in" placeholder="英文單字">
             <input type="text" id="m-in" placeholder="中文翻譯">
@@ -215,12 +220,14 @@
                 <button onclick="startSelectionMode()" style="font-size:13px; flex:1;">📤 批次匯出</button>
             </div>
         </div>
+
         <div id="select-control-bar" style="display:none; background:rgba(0,0,0,0.1); padding:10px; border-radius:8px; margin-bottom:10px; display:flex; gap:10px;">
             <button onclick="toggleSelectAll(true)" style="padding:8px; font-size:14px; flex:1;">全選</button>
             <button onclick="toggleSelectAll(false)" style="padding:8px; font-size:14px; flex:1;">全不選</button>
             <button onclick="finishSelection()" style="padding:8px; font-size:14px; flex:1; background:var(--success); color:white; border:none;">確認選取</button>
             <button onclick="cancelSelection()" style="padding:8px; font-size:14px; flex:1; background:#666; color:white; border:none;">取消</button>
         </div>
+
         <div id="batch-edit-area" style="display:none; background:var(--batch-bg); padding:15px; border-radius:12px; margin-top:10px;">
             <h3 id="batch-title" style="margin-top:0;">批次處理</h3>
             <textarea id="batch-input" rows="8" placeholder="格式：英文 中文 [選總,選對] {填總,填對}"></textarea>
@@ -230,14 +237,16 @@
                 <button onclick="toggleBatch(false)" style="background:none; border:none; margin-bottom: 0;">取消</button>
             </div>
         </div>
+
         <div id="word-list-container" style="max-height:400px; overflow-y:auto; margin-top:15px; border:1px solid rgba(0,0,0,0.1);"></div>
         <button id="edit-exit-btn" onclick="go('p-mgr')" style="margin-top:10px;">離開編輯</button>
     </div>
 </div>
 
 <script>
+    // 🔗 【設定圖片連結的位置】就在下面這三行！
     const BG_URLS = {
-        choice: 'https://i.postimg.cc/HLnVyfZk/IMG-5891.jpg', 
+        choice: 'https://raw.githubusercontent.com/ccc999-blip/pic/refs/heads/main/Gemini_Generated_Image_f1qdqef1qdqef1qd.png', 
         input: '這裡放填充題背景網址',  
         common: 'https://i.postimg.cc/bN5rk6nc/IMG-5963.png' 
     };
@@ -260,6 +269,7 @@
         }
     }
 
+    // --- 其餘 JS 邏輯不變 (已整合上述功能) ---
     function formatItemToString(item) {
         let s = item.stats || { choice: {t:0, c:0}, input: {t:0, c:0} };
         return `${item.w} ${item.m} [${s.choice.t},${s.choice.c}] {${s.input.t},${s.input.c}}`;
