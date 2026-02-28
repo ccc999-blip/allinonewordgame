@@ -60,6 +60,12 @@
         .word-clickable { flex: 1; cursor: pointer; padding: 8px; border-radius: 8px; background: #fafafa; border: 1px solid #eee; min-width: 0; }
         .word-text { font-weight: bold; font-size: 18px; display: block; overflow: hidden; text-overflow: ellipsis; }
         
+        /* 選取模式樣式調整 */
+        .batch-checkbox { width: 25px; height: 25px; margin-right: 10px; cursor: pointer; display: none; flex-shrink: 0; }
+        .selecting .batch-checkbox { display: block; }
+        .selecting .btn-del { display: none; } /* 僅隱藏刪除鈕，保留答對率 */
+        .selecting .stat-group { display: flex; } /* 明確確保數據留著 */
+
         .stat-group { display: flex; gap: 4px; flex-shrink: 0; }
         .stat-box { width: 38px; height: 38px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: white; border: 1px solid rgba(0,0,0,0.1); }
         .stat-choice { background-color: var(--primary); }
@@ -171,6 +177,7 @@
             <div class="legend-item"><div class="stat-box stat-choice" style="width:20px; height:20px;"></div> 選擇題答對率</div>
             <div class="legend-item"><div class="stat-box stat-input" style="width:20px; height:20px;"></div> 填充題答對率</div>
         </div>
+        
         <div id="single-edit-area">
             <input type="text" id="w-in" placeholder="英文單字">
             <input type="text" id="m-in" placeholder="中文翻譯">
@@ -178,8 +185,15 @@
             <button id="save-btn" onclick="saveWord()" style="background:var(--primary); color:white; border:none;">加入單字</button>
             <div style="display: flex; gap: 5px;">
                 <button onclick="openBatchUI('import')" style="font-size:13px; flex:1;">🚀 批次匯入</button>
-                <button onclick="openBatchUI('export')" style="font-size:13px; flex:1;">📤 批次匯出</button>
+                <button onclick="startSelectionMode()" style="font-size:13px; flex:1;">📤 批次匯出</button>
             </div>
+        </div>
+
+        <div id="select-control-bar" style="display:none; background:#eee; padding:10px; border-radius:8px; margin-bottom:10px; display:flex; gap:10px;">
+            <button onclick="toggleSelectAll(true)" style="padding:8px; font-size:14px; flex:1;">全選</button>
+            <button onclick="toggleSelectAll(false)" style="padding:8px; font-size:14px; flex:1;">全不選</button>
+            <button onclick="finishSelection()" style="padding:8px; font-size:14px; flex:1; background:var(--success); color:white; border:none;">確認選取</button>
+            <button onclick="cancelSelection()" style="padding:8px; font-size:14px; flex:1; background:#666; color:white; border:none;">取消</button>
         </div>
 
         <div id="batch-edit-area" style="display:none; background:var(--batch-bg); padding:15px; border-radius:12px; margin-top:10px;">
@@ -193,7 +207,7 @@
         </div>
 
         <div id="word-list-container" style="max-height:400px; overflow-y:auto; margin-top:15px; border:1px solid #eee;"></div>
-        <button onclick="go('p-mgr')" style="margin-top:10px;">離開編輯</button>
+        <button id="edit-exit-btn" onclick="go('p-mgr')" style="margin-top:10px;">離開編輯</button>
     </div>
 </div>
 
@@ -206,16 +220,14 @@
     let quizTimer = null;
     let correctCount = 0;
     let wrongList = [];
+    let isSelecting = false;
 
-    // --- 核心工具：格式化單個對象為字串 (用於匯出/批次) ---
     function formatItemToString(item) {
         let s = item.stats || { choice: {t:0, c:0}, input: {t:0, c:0} };
         return `${item.w} ${item.m} [${s.choice.t},${s.choice.c}] {${s.input.t},${s.input.c}}`;
     }
 
-    // --- 核心工具：從字串解析回單個對象 (用於匯入/批次) ---
     function parseStringToItem(line) {
-        // 優化後的 Regex：不論翻譯中間是否有空白，都能正確捕捉尾端的數據括號
         const regex = /^\s*(\S+)\s+(.+?)(?:\s*\[(\d+),(\d+)\])?(?:\s*\{(\d+),(\d+)\})?\s*$/;
         let match = line.match(regex);
         if(match) {
@@ -228,18 +240,13 @@
                 }
             };
         }
-        // 基礎相容：只有中英
         let p = line.trim().split(/\s+/);
         if(p.length >= 2) {
-            return {
-                w: p[0], m: p.slice(1).join(" "),
-                stats: { choice: {t:0, c:0}, input: {t:0, c:0} }
-            };
+            return { w: p[0], m: p.slice(1).join(" "), stats: { choice: {t:0, c:0}, input: {t:0, c:0} } };
         }
         return null;
     }
 
-    // --- 核心工具：智能篩選答對率判定 ---
     function getModeRate(item, mode) {
         if (!item.stats || !item.stats[mode] || item.stats[mode].t === 0) return "--";
         return Math.round((item.stats[mode].c / item.stats[mode].t) * 100) + "%";
@@ -262,7 +269,6 @@
         });
     }
 
-    // --- 頁面跳轉與基礎功能 ---
     function go(pageId) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(pageId).classList.add('active');
@@ -270,6 +276,7 @@
         document.getElementById('timer-display').style.display = 'none';
         if(pageId === 'p-mgr') drawDBList();
         if(pageId === 'p-sel') drawSelList();
+        if(pageId !== 'p-edit') cancelSelection();
     }
 
     function setGameMode(mode) {
@@ -324,14 +331,9 @@
         let m = document.getElementById('m-in').value.trim();
         let idx = parseInt(document.getElementById('editing-idx').value);
         if(!w || !m) return alert("請填寫完整");
-
         if(isDuplicate(w, m, currentDB, idx)) return alert("此單字組合已存在！");
-
         if(idx === -1) {
-            db[currentDB].push({
-                w, m, 
-                stats: { choice: {t:0, c:0}, input: {t:0, c:0} } 
-            });
+            db[currentDB].push({ w, m, stats: { choice: {t:0, c:0}, input: {t:0, c:0} } });
         } else {
             let originalStats = db[currentDB][idx].stats || { choice: {t:0, c:0}, input: {t:0, c:0} };
             db[currentDB][idx] = { w, m, stats: originalStats };
@@ -341,12 +343,12 @@
 
     function drawWordList() {
         let list = db[currentDB];
-        // 智能排序：錯誤率高的排在前面方便編輯
         list.sort((a, b) => getCombinedRate(a) - getCombinedRate(b));
         let html = '';
         list.forEach((item, i) => {
-            html += `<div class="item">
-                <div class="word-clickable" onclick="triggerEditWord(${i})">
+            html += `<div class="item ${isSelecting ? 'selecting' : ''}">
+                <input type="checkbox" class="batch-checkbox" data-idx="${i}">
+                <div class="word-clickable" onclick="${isSelecting ? `toggleItemCheck(${i})` : `triggerEditWord(${i})`}">
                     <span class="word-text">${item.w}</span>
                     <small style="color:#666">${item.m}</small>
                 </div>
@@ -360,16 +362,50 @@
         document.getElementById('word-list-container').innerHTML = html || '<p style="padding:20px; text-align:center; color:#999;">沒有單字</p>';
     }
 
-    function triggerEditWord(i) {
-        let item = db[currentDB][i];
-        document.getElementById('w-in').value = item.w;
-        document.getElementById('m-in').value = item.m;
-        document.getElementById('editing-idx').value = i;
-        document.getElementById('save-btn').innerText = "更新單字";
-        document.getElementById('save-btn').style.background = "var(--warning)";
+    function startSelectionMode() {
+        if(!db[currentDB] || db[currentDB].length === 0) return alert("題庫是空的");
+        isSelecting = true;
+        document.getElementById('single-edit-area').style.display = 'none';
+        document.getElementById('select-control-bar').style.display = 'flex';
+        document.getElementById('edit-exit-btn').style.display = 'none';
+        drawWordList();
     }
 
-    // --- 批次處理功能 ---
+    function toggleItemCheck(i) {
+        const cb = document.querySelector(`.batch-checkbox[data-idx="${i}"]`);
+        if(cb) cb.checked = !cb.checked;
+    }
+
+    function toggleSelectAll(val) {
+        document.querySelectorAll('.batch-checkbox').forEach(cb => cb.checked = val);
+    }
+
+    function cancelSelection() {
+        isSelecting = false;
+        document.getElementById('single-edit-area').style.display = 'block';
+        document.getElementById('select-control-bar').style.display = 'none';
+        document.getElementById('edit-exit-btn').style.display = 'block';
+        drawWordList();
+    }
+
+    function finishSelection() {
+        const selectedIdxs = Array.from(document.querySelectorAll('.batch-checkbox:checked')).map(cb => parseInt(cb.dataset.idx));
+        if(selectedIdxs.length === 0) return alert("請至少勾選一個單字");
+        const selectedData = selectedIdxs.map(idx => db[currentDB][idx]);
+        isSelecting = false;
+        document.getElementById('select-control-bar').style.display = 'none';
+        document.getElementById('edit-exit-btn').style.display = 'block';
+        const input = document.getElementById('batch-input');
+        const submit = document.getElementById('batch-submit-btn');
+        const copyBtn = document.getElementById('batch-copy-btn');
+        document.getElementById('batch-title').innerText = `📤 匯出選取的單字 (${selectedData.length} 個)`;
+        input.value = selectedData.map(i => formatItemToString(i)).join('\n');
+        input.readOnly = true; 
+        submit.style.display = "none"; 
+        copyBtn.style.display = "block";
+        toggleBatch(true);
+    }
+
     function toggleBatch(show) {
         document.getElementById('single-edit-area').style.display = show ? 'none' : 'block';
         document.getElementById('batch-edit-area').style.display = show ? 'block' : 'none';
@@ -380,15 +416,11 @@
         const input = document.getElementById('batch-input');
         const submit = document.getElementById('batch-submit-btn');
         const copyBtn = document.getElementById('batch-copy-btn');
-        if(mode === 'export') {
-            document.getElementById('batch-title').innerText = "📤 批次匯出 (含數據)";
-            input.value = db[currentDB].map(i => formatItemToString(i)).join('\n');
-            input.readOnly = true; submit.style.display = "none"; copyBtn.style.display = "block";
-        } else {
+        if(mode === 'import') {
             document.getElementById('batch-title').innerText = "🚀 智慧批次匯入";
             input.value = ""; input.readOnly = false; submit.style.display = "block"; copyBtn.style.display = "none";
+            toggleBatch(true);
         }
-        toggleBatch(true);
     }
 
     function handleBatchFinish() {
@@ -411,12 +443,16 @@
         navigator.clipboard.writeText(document.getElementById('batch-input').value).then(() => alert("已複製！"));
     }
 
-    // ==========================================
-    // 備份功能：匯出與匯入 JSON
-    // ==========================================
+    function triggerEditWord(i) {
+        let item = db[currentDB][i];
+        document.getElementById('w-in').value = item.w;
+        document.getElementById('m-in').value = item.m;
+        document.getElementById('editing-idx').value = i;
+        document.getElementById('save-btn').innerText = "更新單字";
+        document.getElementById('save-btn').style.background = "var(--warning)";
+    }
 
     function exportJSON() {
-        // 匯出時直接轉換整個 db 物件，JSON 會自動帶上所有子物件結構 (包含 stats)
         const blob = new Blob([JSON.stringify(db, null, 2)], {type: "application/json"});
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
         a.download = `單字庫備份_${new Date().toLocaleDateString()}.json`; a.click();
@@ -438,7 +474,6 @@
                         let added = 0, skipped = 0;
                         data[key].forEach(nw => {
                             if(!isDuplicate(nw.w, nw.m, key)) {
-                                // 確保匯入後 stats 結構完整，若無則初始化
                                 nw.stats = nw.stats || { choice: {t:0, c:0}, input: {t:0, c:0} };
                                 db[key].push(nw);
                                 added++;
@@ -448,14 +483,10 @@
                     }
                 }
                 saveDB(); drawDBList(); alert("匯入成功！\n" + report);
-            } catch(err) { alert("檔案格式錯誤或損毀"); }
+            } catch(err) { alert("檔案格式錯誤"); }
         };
         reader.readAsText(file); e.target.value = ""; 
     }
-
-    // ==========================================
-    // 遊戲邏輯 (保持穩定)
-    // ==========================================
 
     function prepQuiz(n) {
         currentDB = n;
@@ -477,7 +508,6 @@
         let pool = db[currentDB];
         if(!pool || pool.length < 1) return alert("單字不夠");
         let limit = parseInt(document.getElementById('quiz-num-input').value) || pool.length;
-        // 隨機選題並切片
         quizQueue = [...pool].sort(() => 0.5 - Math.random()).slice(0, limit);
         currentIdx = 0; correctCount = 0; wrongList = [];
         document.getElementById('ui-choice').style.display = (currentGameMode === 'choice' ? 'block' : 'none');
