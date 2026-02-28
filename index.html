@@ -14,41 +14,11 @@
             --warning: #f39c12;
             --border: #333333;
             --edit-bg: #fff9c4;
-            --batch-bg: rgba(227, 242, 253, 0.7);
-            /* 半透明白色背景變數 */
-            --glass-bg: rgba(255, 255, 255, 0.10); 
-            --glass-border: rgba(0, 0, 0, 0.1);
+            --batch-bg: #e3f2fd;
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        body { 
-            font-family: system-ui, -apple-system, sans-serif; 
-            margin: 0; padding: 15px; color: var(--text-dark);
-            min-height: 100vh;
-            position: relative;
-            background-color: #f0f2f5;
-        }
-        
-        #bg-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -1;
-            background-size: cover;
-            background-position: center;
-            transition: background-image 0.5s ease-in-out;
-            opacity: 0.8; /* 提高背景圖片亮度，因為容器變透了 */
-        }
-
-        .container { 
-            width: 100%; max-width: 500px; 
-            background: var(--glass-bg); 
-            backdrop-filter: blur(2px); /* 磨砂玻璃核心效果 */
-            -webkit-backdrop-filter: blur(2px);
-            padding: 25px; border-radius: 20px; 
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1); 
-            border: 1px solid rgba(255,255,255,0.3);
-            margin: auto; position: relative; 
-        }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; margin: 0; padding: 15px; color: var(--text-dark); }
+        .container { width: 100%; max-width: 500px; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); margin: auto; position: relative; }
         
         .page { display: none; }
         .page.active { display: block; }
@@ -56,65 +26,63 @@
         h2 { border-bottom: 3px solid var(--primary); padding-bottom: 10px; margin-top: 0; color: var(--text-dark); text-align: center; }
         p, label { font-weight: 800; color: #000; display: block; margin-bottom: 8px; }
 
-        /* 按鈕透明化 */
         button { 
             width: 100%; padding: 16px; margin-bottom: 12px; border: 2px solid var(--border); 
             border-radius: 12px; font-size: 18px; font-weight: 800; cursor: pointer;
-            background: rgba(255, 255, 255, 0.5); color: var(--text-dark);
-            backdrop-filter: blur(5px);
+            background: #fff; color: var(--text-dark);
         }
         
         .option-btn.correct { background: var(--success) !important; color: white !important; }
         .option-btn.wrong { background: var(--danger) !important; color: white !important; }
 
-        /* 輸入框透明化 */
         input, textarea { 
-            width: 100%; padding: 14px; margin-bottom: 15px; border: 2px solid var(--border); 
-            border-radius: 8px; font-size: 18px; font-weight: bold; 
-            background: rgba(255, 255, 255, 0.4); color: black;
+            width: 100%; padding: 14px; margin-bottom: 15px; border: 3px solid var(--border); 
+            border-radius: 8px; font-size: 18px; font-weight: bold; background: white; color: black;
         }
 
         #timer-display {
             position: absolute; top: 40px; right: 25px; font-size: 24px; font-weight: 900;
-            color: var(--danger); background: rgba(255,255,255,0.8); padding: 5px 10px; border-radius: 8px;
+            color: var(--danger); background: #fff; padding: 5px 10px; border-radius: 8px;
             border: 2px solid var(--danger); display: none; pointer-events: none; z-index: 10;
         }
 
         .quiz-word-container {
             width: 100%; margin: 20px 0; min-height: 80px; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; text-align: center; 
-            background: rgba(255, 255, 255, 0.3); border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.2);
+            align-items: center; justify-content: center; text-align: center; background: #f8f9fa; border-radius: 10px;
         }
-        .quiz-word { font-size: 42px; color: var(--primary); font-weight: 900; word-break: break-all; text-shadow: 1px 1px 0px white; }
+        .quiz-word { font-size: 42px; color: var(--primary); font-weight: 900; word-break: break-all; }
         .scaffold-text { font-size: 26px; color: var(--warning); letter-spacing: 4px; font-weight: bold; margin-top: 5px; }
 
-        .progress-bar { width: 100%; height: 12px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 20px; overflow: hidden; border: 1px solid #999; }
+        .progress-bar { width: 100%; height: 12px; background: #ddd; border-radius: 6px; margin-bottom: 20px; overflow: hidden; border: 1px solid #999; }
         #progress-fill { height: 100%; background: var(--primary); width: 0%; transition: 0.3s; }
 
-        .item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.1); gap: 8px; }
-        .word-clickable { flex: 1; cursor: pointer; padding: 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.3); border: 1px solid rgba(255,255,255,0.3); min-width: 0; }
+        .item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 2px solid #ccc; gap: 8px; }
+        .word-clickable { flex: 1; cursor: pointer; padding: 8px; border-radius: 8px; background: #fafafa; border: 1px solid #eee; min-width: 0; }
         .word-text { font-weight: bold; font-size: 18px; display: block; overflow: hidden; text-overflow: ellipsis; }
         
+        /* 選取模式樣式調整 */
+        .batch-checkbox { width: 25px; height: 25px; margin-right: 10px; cursor: pointer; display: none; flex-shrink: 0; }
+        .selecting .batch-checkbox { display: block; }
+        .selecting .btn-del { display: none; } /* 僅隱藏刪除鈕，保留答對率 */
+        .selecting .stat-group { display: flex; } /* 明確確保數據留著 */
+
         .stat-group { display: flex; gap: 4px; flex-shrink: 0; }
         .stat-box { width: 38px; height: 38px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: white; border: 1px solid rgba(0,0,0,0.1); }
         .stat-choice { background-color: var(--primary); }
         .stat-input { background-color: var(--success); }
         
-        .legend { font-size: 12px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-around; }
+        .legend { font-size: 12px; background: #eee; padding: 8px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-around; border: 1px solid #ddd; }
         .legend-item { display: flex; align-items: center; gap: 5px; font-weight: bold; }
 
         .btn-del { width: 40px; height: 40px; padding: 0; font-size: 16px; margin-bottom: 0; background: var(--danger); color: white; border: none; flex-shrink: 0; border-radius: 8px; }
         
-        #wrong-confirm-box { display: none; background: rgba(255, 0, 0, 0.1); border: 2px solid var(--danger); padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: center; }
-        .stat-card { background: rgba(255, 255, 255, 0.3); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.1); }
+        #wrong-confirm-box { display: none; background: #fff5f5; border: 2px solid var(--danger); padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: center; }
+        .stat-card { background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 2px solid #ddd; }
         .stat-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 18px; font-weight: bold; }
-        .wrong-list-area { background: rgba(255,255,255,0.5); border: 1px solid var(--danger); padding: 10px; border-radius: 8px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; }
+        .wrong-list-area { background: #fff; border: 2px solid var(--danger); padding: 10px; border-radius: 8px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 16px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
-
-<div id="bg-overlay"></div>
 
 <div class="container">
     <div id="timer-display">0</div>
@@ -135,13 +103,13 @@
     <div id="p-sel" class="page">
         <h2 id="sel-title-text">設定測驗</h2>
         <div id="sel-list"></div>
-        <div id="quiz-config" style="display:none; margin-top:20px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
+        <div id="quiz-config" style="display:none; margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
             <label>1. 測驗題數：</label>
             <input type="number" id="quiz-num-input" min="1" inputmode="numeric">
             <label>2. 每題時間 (秒)：</label>
             <input type="number" id="quiz-time-input" min="0" inputmode="numeric" value="10">
             <div id="config-input-only" style="display:none;">
-                <label style="display: flex; align-items: center; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 8px;">
+                <label style="display: flex; align-items: center; background: #f9f9f9; padding: 10px; border-radius: 8px;">
                     <input type="checkbox" id="hint-toggle" style="width: auto; margin-right: 10px; margin-bottom: 0;"> 開啟首尾提示
                 </label>
             </div>
@@ -221,7 +189,7 @@
             </div>
         </div>
 
-        <div id="select-control-bar" style="display:none; background:rgba(0,0,0,0.1); padding:10px; border-radius:8px; margin-bottom:10px; display:flex; gap:10px;">
+        <div id="select-control-bar" style="display:none; background:#eee; padding:10px; border-radius:8px; margin-bottom:10px; display:flex; gap:10px;">
             <button onclick="toggleSelectAll(true)" style="padding:8px; font-size:14px; flex:1;">全選</button>
             <button onclick="toggleSelectAll(false)" style="padding:8px; font-size:14px; flex:1;">全不選</button>
             <button onclick="finishSelection()" style="padding:8px; font-size:14px; flex:1; background:var(--success); color:white; border:none;">確認選取</button>
@@ -238,19 +206,12 @@
             </div>
         </div>
 
-        <div id="word-list-container" style="max-height:400px; overflow-y:auto; margin-top:15px; border:1px solid rgba(0,0,0,0.1);"></div>
+        <div id="word-list-container" style="max-height:400px; overflow-y:auto; margin-top:15px; border:1px solid #eee;"></div>
         <button id="edit-exit-btn" onclick="go('p-mgr')" style="margin-top:10px;">離開編輯</button>
     </div>
 </div>
 
 <script>
-    // 🔗 【設定圖片連結的位置】就在下面這三行！
-    const BG_URLS = {
-        choice: 'https://raw.githubusercontent.com/ccc999-blip/pic/refs/heads/main/Gemini_Generated_Image_f1qdqef1qdqef1qd.png', 
-        input: 'https://raw.githubusercontent.com/ccc999-blip/pic/refs/heads/main/Gemini_Generated_Image_hfse4dhfse4dhfse.png',  
-        common: 'https://i.postimg.cc/bN5rk6nc/IMG-5963.png' 
-    };
-
     let db = JSON.parse(localStorage.getItem('pro_v_db_v3')) || {};
     let currentDB = "";
     let currentGameMode = ""; 
@@ -261,19 +222,11 @@
     let wrongList = [];
     let isSelecting = false;
 
-    function updateBackground(type) {
-        const bgEl = document.getElementById('bg-overlay');
-        const url = BG_URLS[type] || BG_URLS.common;
-        if(url.startsWith('http')) {
-            bgEl.style.backgroundImage = `url('${url}')`;
-        }
-    }
-
-    // --- 其餘 JS 邏輯不變 (已整合上述功能) ---
     function formatItemToString(item) {
         let s = item.stats || { choice: {t:0, c:0}, input: {t:0, c:0} };
         return `${item.w} ${item.m} [${s.choice.t},${s.choice.c}] {${s.input.t},${s.input.c}}`;
     }
+
     function parseStringToItem(line) {
         const regex = /^\s*(\S+)\s+(.+?)(?:\s*\[(\d+),(\d+)\])?(?:\s*\{(\d+),(\d+)\})?\s*$/;
         let match = line.match(regex);
@@ -293,16 +246,19 @@
         }
         return null;
     }
+
     function getModeRate(item, mode) {
         if (!item.stats || !item.stats[mode] || item.stats[mode].t === 0) return "--";
         return Math.round((item.stats[mode].c / item.stats[mode].t) * 100) + "%";
     }
+
     function getCombinedRate(item) {
         if (!item.stats) return 0;
         let totalT = (item.stats.choice?.t || 0) + (item.stats.input?.t || 0);
         let totalC = (item.stats.choice?.c || 0) + (item.stats.input?.c || 0);
         return totalT === 0 ? 0 : (totalC / totalT);
     }
+
     function isDuplicate(w, m, dbName, excludeIdx = -1) {
         if(!db[dbName]) return false;
         const targetW = w.trim().toLowerCase();
@@ -312,6 +268,7 @@
             return item.w.trim().toLowerCase() === targetW && item.m.trim().toLowerCase() === targetM;
         });
     }
+
     function go(pageId) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(pageId).classList.add('active');
@@ -320,21 +277,24 @@
         if(pageId === 'p-mgr') drawDBList();
         if(pageId === 'p-sel') drawSelList();
         if(pageId !== 'p-edit') cancelSelection();
-        if (pageId !== 'p-quiz') updateBackground('common');
     }
+
     function setGameMode(mode) {
         currentGameMode = mode;
         document.getElementById('sel-title-text').innerText = (mode === 'choice' ? '英翻中：設定' : '中翻英：設定');
         document.getElementById('config-input-only').style.display = (mode === 'input' ? 'block' : 'none');
         go('p-sel');
     }
+
     function saveDB() { localStorage.setItem('pro_v_db_v3', JSON.stringify(db)); }
+
     function addDB() {
         let name = document.getElementById('db-in').value.trim();
         if(!name || db[name]) return alert("名稱無效或已存在");
         db[name] = []; saveDB(); drawDBList();
         document.getElementById('db-in').value = "";
     }
+
     function drawDBList() {
         let html = '';
         for(let n in db) {
@@ -346,15 +306,18 @@
         }
         document.getElementById('db-list').innerHTML = html;
     }
+
     function renameDB(old) {
         let n = prompt("重命名題庫：", old);
         if(n && n.trim() && !db[n]) { db[n] = db[old]; delete db[old]; saveDB(); drawDBList(); }
     }
+
     function openEdit(n) {
         currentDB = n;
         document.getElementById('edit-title').innerText = n;
         resetEdit(); drawWordList(); go('p-edit');
     }
+
     function resetEdit() {
         document.getElementById('w-in').value = ""; document.getElementById('m-in').value = "";
         document.getElementById('editing-idx').value = "-1";
@@ -362,6 +325,7 @@
         document.getElementById('save-btn').style.background = "var(--primary)";
         toggleBatch(false);
     }
+
     function saveWord() {
         let w = document.getElementById('w-in').value.trim();
         let m = document.getElementById('m-in').value.trim();
@@ -376,15 +340,17 @@
         }
         saveDB(); drawWordList(); resetEdit();
     }
+
     function drawWordList() {
         let list = db[currentDB];
         list.sort((a, b) => getCombinedRate(a) - getCombinedRate(b));
         let html = '';
         list.forEach((item, i) => {
-            html += `<div class="item">
-                <div class="word-clickable" onclick="triggerEditWord(${i})">
+            html += `<div class="item ${isSelecting ? 'selecting' : ''}">
+                <input type="checkbox" class="batch-checkbox" data-idx="${i}">
+                <div class="word-clickable" onclick="${isSelecting ? `toggleItemCheck(${i})` : `triggerEditWord(${i})`}">
                     <span class="word-text">${item.w}</span>
-                    <small style="color:#333">${item.m}</small>
+                    <small style="color:#666">${item.m}</small>
                 </div>
                 <div class="stat-group">
                     <div class="stat-box stat-choice">${getModeRate(item, 'choice')}</div>
@@ -393,16 +359,9 @@
                 <button class="btn-del" onclick="db['${currentDB}'].splice(${i},1); saveDB(); drawWordList();">X</button>
             </div>`;
         });
-        document.getElementById('word-list-container').innerHTML = html || '<p style="padding:20px; text-align:center; color:#333;">沒有單字</p>';
+        document.getElementById('word-list-container').innerHTML = html || '<p style="padding:20px; text-align:center; color:#999;">沒有單字</p>';
     }
-    function triggerEditWord(i) {
-        let item = db[currentDB][i];
-        document.getElementById('w-in').value = item.w;
-        document.getElementById('m-in').value = item.m;
-        document.getElementById('editing-idx').value = i;
-        document.getElementById('save-btn').innerText = "更新單字";
-        document.getElementById('save-btn').style.background = "var(--warning)";
-    }
+
     function startSelectionMode() {
         if(!db[currentDB] || db[currentDB].length === 0) return alert("題庫是空的");
         isSelecting = true;
@@ -411,9 +370,16 @@
         document.getElementById('edit-exit-btn').style.display = 'none';
         drawWordList();
     }
+
+    function toggleItemCheck(i) {
+        const cb = document.querySelector(`.batch-checkbox[data-idx="${i}"]`);
+        if(cb) cb.checked = !cb.checked;
+    }
+
     function toggleSelectAll(val) {
         document.querySelectorAll('.batch-checkbox').forEach(cb => cb.checked = val);
     }
+
     function cancelSelection() {
         isSelecting = false;
         document.getElementById('single-edit-area').style.display = 'block';
@@ -421,6 +387,7 @@
         document.getElementById('edit-exit-btn').style.display = 'block';
         drawWordList();
     }
+
     function finishSelection() {
         const selectedIdxs = Array.from(document.querySelectorAll('.batch-checkbox:checked')).map(cb => parseInt(cb.dataset.idx));
         if(selectedIdxs.length === 0) return alert("請至少勾選一個單字");
@@ -438,11 +405,13 @@
         copyBtn.style.display = "block";
         toggleBatch(true);
     }
+
     function toggleBatch(show) {
         document.getElementById('single-edit-area').style.display = show ? 'none' : 'block';
         document.getElementById('batch-edit-area').style.display = show ? 'block' : 'none';
         document.getElementById('word-list-container').style.display = show ? 'none' : 'block';
     }
+
     function openBatchUI(mode) {
         const input = document.getElementById('batch-input');
         const submit = document.getElementById('batch-submit-btn');
@@ -453,6 +422,7 @@
             toggleBatch(true);
         }
     }
+
     function handleBatchFinish() {
         let raw = document.getElementById('batch-input').value.trim();
         if(!raw) { toggleBatch(false); return; }
@@ -468,14 +438,26 @@
         saveDB(); drawWordList(); toggleBatch(false);
         alert(`匯入完成！\n成功：${added}\n忽略：${skipped}`);
     }
+
     function copyBatchContent() {
         navigator.clipboard.writeText(document.getElementById('batch-input').value).then(() => alert("已複製！"));
     }
+
+    function triggerEditWord(i) {
+        let item = db[currentDB][i];
+        document.getElementById('w-in').value = item.w;
+        document.getElementById('m-in').value = item.m;
+        document.getElementById('editing-idx').value = i;
+        document.getElementById('save-btn').innerText = "更新單字";
+        document.getElementById('save-btn').style.background = "var(--warning)";
+    }
+
     function exportJSON() {
         const blob = new Blob([JSON.stringify(db, null, 2)], {type: "application/json"});
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
         a.download = `單字庫備份_${new Date().toLocaleDateString()}.json`; a.click();
     }
+
     function importJSON(e) {
         const reader = new FileReader();
         const file = e.target.files[0];
@@ -483,19 +465,29 @@
         reader.onload = (ev) => {
             try {
                 let data = JSON.parse(ev.target.result);
+                let report = "";
                 for(let key in data) {
-                    if(!db[key]) db[key] = data[key];
-                    else {
+                    if(!db[key]) {
+                        db[key] = data[key];
+                        report += `新增題庫「${key}」\n`;
+                    } else {
+                        let added = 0, skipped = 0;
                         data[key].forEach(nw => {
-                            if(!isDuplicate(nw.w, nw.m, key)) db[key].push(nw);
+                            if(!isDuplicate(nw.w, nw.m, key)) {
+                                nw.stats = nw.stats || { choice: {t:0, c:0}, input: {t:0, c:0} };
+                                db[key].push(nw);
+                                added++;
+                            } else { skipped++; }
                         });
+                        report += `更新「${key}」：新增 ${added}，重複 ${skipped}\n`;
                     }
                 }
-                saveDB(); drawDBList(); alert("匯入成功！");
+                saveDB(); drawDBList(); alert("匯入成功！\n" + report);
             } catch(err) { alert("檔案格式錯誤"); }
         };
         reader.readAsText(file); e.target.value = ""; 
     }
+
     function prepQuiz(n) {
         currentDB = n;
         document.querySelectorAll('#sel-list button').forEach(b => b.style.border = '2px solid #333');
@@ -505,15 +497,16 @@
         document.getElementById('quiz-num-input').value = db[n].length;
         document.getElementById('pool-info').innerText = "上限：" + db[n].length + " 題";
     }
+
     function drawSelList() {
         let html = '';
         for(let n in db) html += `<button id="btn-sel-${n}" onclick="prepQuiz('${n}')">${n} (${db[n].length})</button>`;
         document.getElementById('sel-list').innerHTML = html || '請先建立題庫';
     }
+
     function startQuiz() {
         let pool = db[currentDB];
         if(!pool || pool.length < 1) return alert("單字不夠");
-        updateBackground(currentGameMode);
         let limit = parseInt(document.getElementById('quiz-num-input').value) || pool.length;
         quizQueue = [...pool].sort(() => 0.5 - Math.random()).slice(0, limit);
         currentIdx = 0; correctCount = 0; wrongList = [];
@@ -521,6 +514,7 @@
         document.getElementById('ui-input').style.display = (currentGameMode === 'input' ? 'block' : 'none');
         go('p-quiz'); renderNextQ();
     }
+
     function renderNextQ() {
         if(quizTimer) clearInterval(quizTimer);
         let q = quizQueue[currentIdx];
@@ -535,6 +529,7 @@
             setupInputUI(q);
         }
     }
+
     function startCountdown(q) {
         let timeLimit = parseInt(document.getElementById('quiz-time-input').value) || 0;
         if(timeLimit > 0) {
@@ -547,6 +542,7 @@
             }, 1000);
         } else { document.getElementById('timer-display').style.display = 'none'; }
     }
+
     function setupChoiceUI(q) {
         document.getElementById('choice-next-box').style.display = 'none';
         let allM = [...new Set(db[currentDB].map(i => i.m))];
@@ -558,6 +554,7 @@
         });
         document.getElementById('q-options-container').innerHTML = html;
     }
+
     function checkChoiceAns(btn, sel, cor) {
         if(quizTimer) clearInterval(quizTimer);
         let q = quizQueue[currentIdx];
@@ -568,6 +565,7 @@
             setTimeout(nextQ, 800);
         } else { btn.classList.add('wrong'); handleWrong(q); }
     }
+
     function setupInputUI(q) {
         document.getElementById('wrong-confirm-box').style.display = 'none';
         document.getElementById('input-zone').style.display = 'block';
@@ -581,6 +579,7 @@
         inp.value = ""; inp.focus();
         inp.onkeydown = (e) => { if(e.key === 'Enter') checkInputAns(); };
     }
+
     function checkInputAns() {
         if(quizTimer) clearInterval(quizTimer);
         let q = quizQueue[currentIdx];
@@ -590,6 +589,7 @@
             correctCount++; nextQ();
         } else { handleWrong(q); }
     }
+
     function handleWrong(q) {
         updateStat(q, false); wrongList.push(q);
         if(currentGameMode === 'choice') {
@@ -604,17 +604,20 @@
             document.getElementById('wrong-confirm-box').style.display = 'block';
         }
     }
+
     function updateStat(item, isCorrect) {
         if (!item.stats) item.stats = { choice: {t:0, c:0}, input: {t:0, c:0} };
         item.stats[currentGameMode].t++;
         if (isCorrect) item.stats[currentGameMode].c++;
         saveDB();
     }
+
     function nextQ() {
         currentIdx++;
         if(currentIdx < quizQueue.length) renderNextQ();
         else showResult();
     }
+
     function showResult() {
         document.getElementById('res-total').innerText = quizQueue.length;
         document.getElementById('res-correct').innerText = correctCount;
@@ -625,13 +628,12 @@
         } else { document.getElementById('res-wrong-section').style.display = 'none'; }
         go('p-result');
     }
+
     function copyWrongList() {
         navigator.clipboard.writeText(document.getElementById('res-wrong-list').innerText).then(() => alert("已複製！"));
     }
-    window.onload = () => { 
-        if(Object.keys(db).length > 0) drawDBList(); 
-        updateBackground('common'); 
-    };
+
+    window.onload = () => { if(Object.keys(db).length > 0) drawDBList(); };
 </script>
 </body>
 </html>
