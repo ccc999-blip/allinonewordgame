@@ -184,7 +184,7 @@
 
         <div id="batch-edit-area" style="display:none; background:var(--batch-bg); padding:15px; border-radius:12px; margin-top:10px;">
             <h3 id="batch-title" style="margin-top:0;">批次處理</h3>
-            <textarea id="batch-input" rows="8" placeholder="格式：英文 中文 (每行一個)"></textarea>
+            <textarea id="batch-input" rows="8" placeholder="格式：英文 中文 [選總,選對] {填總,填對}"></textarea>
             <div id="batch-footer-btns">
                 <button id="batch-submit-btn" onclick="handleBatchFinish()" style="background:var(--primary); color:white; border:none;">完成儲存</button>
                 <button id="batch-copy-btn" onclick="copyBatchContent()" style="background:#444; color:white; border:none; display:none;">📋 一鍵複製全部</button>
@@ -207,13 +207,44 @@
     let correctCount = 0;
     let wrongList = [];
 
-    // --- 輔助函式：計算單模式答對率 ---
+    // --- 核心工具：格式化單個對象為字串 (用於匯出/批次) ---
+    function formatItemToString(item) {
+        let s = item.stats || { choice: {t:0, c:0}, input: {t:0, c:0} };
+        return `${item.w} ${item.m} [${s.choice.t},${s.choice.c}] {${s.input.t},${s.input.c}}`;
+    }
+
+    // --- 核心工具：從字串解析回單個對象 (用於匯入/批次) ---
+    function parseStringToItem(line) {
+        // 優化後的 Regex：不論翻譯中間是否有空白，都能正確捕捉尾端的數據括號
+        const regex = /^\s*(\S+)\s+(.+?)(?:\s*\[(\d+),(\d+)\])?(?:\s*\{(\d+),(\d+)\})?\s*$/;
+        let match = line.match(regex);
+        if(match) {
+            return {
+                w: match[1].trim(),
+                m: match[2].trim(),
+                stats: {
+                    choice: { t: parseInt(match[3]) || 0, c: parseInt(match[4]) || 0 },
+                    input: { t: parseInt(match[5]) || 0, c: parseInt(match[6]) || 0 }
+                }
+            };
+        }
+        // 基礎相容：只有中英
+        let p = line.trim().split(/\s+/);
+        if(p.length >= 2) {
+            return {
+                w: p[0], m: p.slice(1).join(" "),
+                stats: { choice: {t:0, c:0}, input: {t:0, c:0} }
+            };
+        }
+        return null;
+    }
+
+    // --- 核心工具：智能篩選答對率判定 ---
     function getModeRate(item, mode) {
         if (!item.stats || !item.stats[mode] || item.stats[mode].t === 0) return "--";
         return Math.round((item.stats[mode].c / item.stats[mode].t) * 100) + "%";
     }
 
-    // --- 輔助函式：計算綜合答對率 (排序用) ---
     function getCombinedRate(item) {
         if (!item.stats) return 0;
         let totalT = (item.stats.choice?.t || 0) + (item.stats.input?.t || 0);
@@ -221,16 +252,17 @@
         return totalT === 0 ? 0 : (totalC / totalT);
     }
 
-    // --- 核心：唯一性檢查 (不分大小寫) ---
-    function isDuplicate(w, m, excludeIdx = -1) {
+    function isDuplicate(w, m, dbName, excludeIdx = -1) {
+        if(!db[dbName]) return false;
         const targetW = w.trim().toLowerCase();
         const targetM = m.trim().toLowerCase();
-        return db[currentDB].some((item, idx) => {
+        return db[dbName].some((item, idx) => {
             if (idx === excludeIdx) return false;
             return item.w.trim().toLowerCase() === targetW && item.m.trim().toLowerCase() === targetM;
         });
     }
 
+    // --- 頁面跳轉與基礎功能 ---
     function go(pageId) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(pageId).classList.add('active');
@@ -293,9 +325,7 @@
         let idx = parseInt(document.getElementById('editing-idx').value);
         if(!w || !m) return alert("請填寫完整");
 
-        if(isDuplicate(w, m, idx)) {
-            return alert("此單字組合（中英完全相同）已存在於題庫中！");
-        }
+        if(isDuplicate(w, m, currentDB, idx)) return alert("此單字組合已存在！");
 
         if(idx === -1) {
             db[currentDB].push({
@@ -311,21 +341,18 @@
 
     function drawWordList() {
         let list = db[currentDB];
+        // 智能排序：錯誤率高的排在前面方便編輯
         list.sort((a, b) => getCombinedRate(a) - getCombinedRate(b));
-
         let html = '';
         list.forEach((item, i) => {
-            let choiceRate = getModeRate(item, 'choice');
-            let inputRate = getModeRate(item, 'input');
-
             html += `<div class="item">
                 <div class="word-clickable" onclick="triggerEditWord(${i})">
                     <span class="word-text">${item.w}</span>
                     <small style="color:#666">${item.m}</small>
                 </div>
                 <div class="stat-group">
-                    <div class="stat-box stat-choice">${choiceRate}</div>
-                    <div class="stat-box stat-input">${inputRate}</div>
+                    <div class="stat-box stat-choice">${getModeRate(item, 'choice')}</div>
+                    <div class="stat-box stat-input">${getModeRate(item, 'input')}</div>
                 </div>
                 <button class="btn-del" onclick="db['${currentDB}'].splice(${i},1); saveDB(); drawWordList();">X</button>
             </div>`;
@@ -342,7 +369,7 @@
         document.getElementById('save-btn').style.background = "var(--warning)";
     }
 
-    // --- 批次處理與匯出匯入 ---
+    // --- 批次處理功能 ---
     function toggleBatch(show) {
         document.getElementById('single-edit-area').style.display = show ? 'none' : 'block';
         document.getElementById('batch-edit-area').style.display = show ? 'block' : 'none';
@@ -350,64 +377,47 @@
     }
 
     function openBatchUI(mode) {
-        const title = document.getElementById('batch-title');
         const input = document.getElementById('batch-input');
         const submit = document.getElementById('batch-submit-btn');
         const copyBtn = document.getElementById('batch-copy-btn');
-
         if(mode === 'export') {
-            title.innerText = "📤 批次匯出 (僅供複製)";
-            input.value = db[currentDB].map(i => `${i.w} ${i.m}`).join('\n');
-            input.readOnly = true;
-            submit.style.display = "none";
-            copyBtn.style.display = "block";
+            document.getElementById('batch-title').innerText = "📤 批次匯出 (含數據)";
+            input.value = db[currentDB].map(i => formatItemToString(i)).join('\n');
+            input.readOnly = true; submit.style.display = "none"; copyBtn.style.display = "block";
         } else {
-            title.innerText = "🚀 批次匯入";
-            input.value = "";
-            input.readOnly = false;
-            submit.style.display = "block";
-            copyBtn.style.display = "none";
+            document.getElementById('batch-title').innerText = "🚀 智慧批次匯入";
+            input.value = ""; input.readOnly = false; submit.style.display = "block"; copyBtn.style.display = "none";
         }
         toggleBatch(true);
-    }
-
-    function copyBatchContent() {
-        const content = document.getElementById('batch-input').value;
-        if(!content) return alert("沒有內容可以複製");
-        navigator.clipboard.writeText(content).then(() => {
-            alert("已成功複製全部內容！");
-        });
     }
 
     function handleBatchFinish() {
         let raw = document.getElementById('batch-input').value.trim();
         if(!raw) { toggleBatch(false); return; }
-        
         let lines = raw.split('\n');
-        let added = 0;
-        let skipped = 0;
-
+        let added = 0, skipped = 0;
         lines.forEach(line => {
-            let p = line.trim().split(/\s+/);
-            if(p.length >= 2) {
-                let w = p[0];
-                let m = p.slice(1).join(" ");
-                if(!isDuplicate(w, m)) {
-                    db[currentDB].push({ 
-                        w, m, 
-                        stats: { choice: {t:0, c:0}, input: {t:0, c:0} } 
-                    });
-                    added++;
-                } else { skipped++; }
+            let item = parseStringToItem(line);
+            if(item && !isDuplicate(item.w, item.m, currentDB)) {
+                db[currentDB].push(item);
+                added++;
             } else { skipped++; }
         });
-
         saveDB(); drawWordList(); toggleBatch(false);
-        alert(`處理完成！\n成功匯入：${added} 筆\n忽略(重複/格式不符)：${skipped} 筆`);
+        alert(`匯入完成！\n成功：${added}\n忽略：${skipped}`);
     }
 
+    function copyBatchContent() {
+        navigator.clipboard.writeText(document.getElementById('batch-input').value).then(() => alert("已複製！"));
+    }
+
+    // ==========================================
+    // 備份功能：匯出與匯入 JSON
+    // ==========================================
+
     function exportJSON() {
-        const blob = new Blob([JSON.stringify(db)], {type: "application/json"});
+        // 匯出時直接轉換整個 db 物件，JSON 會自動帶上所有子物件結構 (包含 stats)
+        const blob = new Blob([JSON.stringify(db, null, 2)], {type: "application/json"});
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
         a.download = `單字庫備份_${new Date().toLocaleDateString()}.json`; a.click();
     }
@@ -416,38 +426,37 @@
         const reader = new FileReader();
         const file = e.target.files[0];
         if(!file) return;
-
         reader.onload = (ev) => {
             try {
-                let importedData = JSON.parse(ev.target.result);
+                let data = JSON.parse(ev.target.result);
                 let report = "";
-                for(let key in importedData) {
+                for(let key in data) {
                     if(!db[key]) {
-                        db[key] = importedData[key];
-                        report += `新增題庫「${key}」(${importedData[key].length} 筆)\n`;
+                        db[key] = data[key];
+                        report += `新增題庫「${key}」\n`;
                     } else {
-                        let added = 0; let skipped = 0;
-                        importedData[key].forEach(nw => {
-                            let prevDB = currentDB;
-                            currentDB = key;
-                            if(!isDuplicate(nw.w, nw.m)) {
+                        let added = 0, skipped = 0;
+                        data[key].forEach(nw => {
+                            if(!isDuplicate(nw.w, nw.m, key)) {
+                                // 確保匯入後 stats 結構完整，若無則初始化
+                                nw.stats = nw.stats || { choice: {t:0, c:0}, input: {t:0, c:0} };
                                 db[key].push(nw);
                                 added++;
                             } else { skipped++; }
-                            currentDB = prevDB;
                         });
-                        report += `更新題庫「${key}」：新增 ${added} 筆，忽略 ${skipped} 筆重複\n`;
+                        report += `更新「${key}」：新增 ${added}，重複 ${skipped}\n`;
                     }
                 }
-                saveDB(); drawDBList();
-                alert("檔案匯入報告：\n" + report);
+                saveDB(); drawDBList(); alert("匯入成功！\n" + report);
             } catch(err) { alert("檔案格式錯誤或損毀"); }
         };
-        reader.readAsText(file);
-        e.target.value = ""; 
+        reader.readAsText(file); e.target.value = ""; 
     }
 
-    // --- 遊戲邏輯與計時功能 (保持完好) ---
+    // ==========================================
+    // 遊戲邏輯 (保持穩定)
+    // ==========================================
+
     function prepQuiz(n) {
         currentDB = n;
         document.querySelectorAll('#sel-list button').forEach(b => b.style.border = '2px solid #333');
@@ -460,9 +469,7 @@
 
     function drawSelList() {
         let html = '';
-        for(let n in db) {
-            html += `<button id="btn-sel-${n}" onclick="prepQuiz('${n}')">${n} (${db[n].length})</button>`;
-        }
+        for(let n in db) html += `<button id="btn-sel-${n}" onclick="prepQuiz('${n}')">${n} (${db[n].length})</button>`;
         document.getElementById('sel-list').innerHTML = html || '請先建立題庫';
     }
 
@@ -470,12 +477,12 @@
         let pool = db[currentDB];
         if(!pool || pool.length < 1) return alert("單字不夠");
         let limit = parseInt(document.getElementById('quiz-num-input').value) || pool.length;
+        // 隨機選題並切片
         quizQueue = [...pool].sort(() => 0.5 - Math.random()).slice(0, limit);
         currentIdx = 0; correctCount = 0; wrongList = [];
         document.getElementById('ui-choice').style.display = (currentGameMode === 'choice' ? 'block' : 'none');
         document.getElementById('ui-input').style.display = (currentGameMode === 'input' ? 'block' : 'none');
-        go('p-quiz');
-        renderNextQ();
+        go('p-quiz'); renderNextQ();
     }
 
     function renderNextQ() {
@@ -498,11 +505,9 @@
         if(timeLimit > 0) {
             let left = timeLimit;
             const timerEl = document.getElementById('timer-display');
-            timerEl.innerText = left;
-            timerEl.style.display = 'block';
+            timerEl.innerText = left; timerEl.style.display = 'block';
             quizTimer = setInterval(() => {
-                left--;
-                timerEl.innerText = left;
+                left--; timerEl.innerText = left;
                 if(left <= 0) { clearInterval(quizTimer); handleWrong(q); }
             }, 1000);
         } else { document.getElementById('timer-display').style.display = 'none'; }
@@ -525,15 +530,10 @@
         let q = quizQueue[currentIdx];
         document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
         if(sel === cor) {
-            btn.classList.add('correct');
-            updateStat(q, true);
-            confetti({ particleCount: 40, spread: 50 });
-            correctCount++;
+            btn.classList.add('correct'); updateStat(q, true);
+            confetti({ particleCount: 40, spread: 50 }); correctCount++;
             setTimeout(nextQ, 800);
-        } else {
-            btn.classList.add('wrong');
-            handleWrong(q);
-        }
+        } else { btn.classList.add('wrong'); handleWrong(q); }
     }
 
     function setupInputUI(q) {
@@ -555,16 +555,13 @@
         let q = quizQueue[currentIdx];
         let user = document.getElementById('ans-in').value.trim().toLowerCase();
         if(user === q.w.toLowerCase()) {
-            updateStat(q, true);
-            confetti({ particleCount: 40, spread: 50 });
-            correctCount++;
-            nextQ();
+            updateStat(q, true); confetti({ particleCount: 40, spread: 50 });
+            correctCount++; nextQ();
         } else { handleWrong(q); }
     }
 
     function handleWrong(q) {
-        updateStat(q, false);
-        wrongList.push(q);
+        updateStat(q, false); wrongList.push(q);
         if(currentGameMode === 'choice') {
             document.querySelectorAll('.option-btn').forEach(b => {
                 if(b.innerText === q.m) b.classList.add('correct');
