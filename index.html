@@ -299,6 +299,7 @@
     let isSelecting = false;
 
     // --- 新增：匯出格式化函式 (之前少這段) ---
+            // --- 1. 格式化函式：修復匯出功能 ---
     function formatItemToString(item) {
         let s = `${item.w} ${item.m}`;
         if(item.stats) {
@@ -307,23 +308,70 @@
         return s;
     }
 
+    // --- 2. 智慧切分邏輯：保留括號判斷並支援片語 ---
     function parseStringToItem(line) {
-        const regex = /^\s*(\S+)\s+(.+?)(?:\s*\[(\d+),(\d+)\])?(?:\s*\{(\d+),(\d+)\})?\s*$/;
-        let match = line.match(regex);
-        if(match) {
-            return {
-                w: match[1].trim(),
-                m: match[2].trim(),
-                stats: {
-                    choice: { t: parseInt(match[3]) || 0, c: parseInt(match[4]) || 0 },
-                    input: { t: parseInt(match[5]) || 0, c: parseInt(match[6]) || 0 }
-                }
-            };
+        line = line.trim();
+        if (!line) return null;
+
+        let stats = {
+            choice: { t: 0, c: 0 },
+            input: { t: 0, c: 0 }
+        };
+
+        // 剝離統計數據 [t,c] {t,c}
+        const choiceMatch = line.match(/\[(\d+),(\d+)\]\s*$/);
+        if (choiceMatch) {
+            stats.choice.t = parseInt(choiceMatch[1]);
+            stats.choice.c = parseInt(choiceMatch[2]);
+            line = line.replace(choiceMatch[0], "").trim();
         }
-        let p = line.trim().split(/\s+/);
-        if(p.length >= 2) return { w: p[0], m: p.slice(1).join(" "), stats: { choice: {t:0, c:0}, input: {t:0, c:0} } };
+        const inputMatch = line.match(/\{(\d+),(\d+)\}\s*$/);
+        if (inputMatch) {
+            stats.input.t = parseInt(inputMatch[1]);
+            stats.input.c = parseInt(inputMatch[2]);
+            line = line.replace(inputMatch[0], "").trim();
+        }
+
+        // 核心修正：尋找第一個中文字位置
+        const firstChnIdx = line.search(/[\u4e00-\u9fa5]/);
+
+        let englishPart = "";
+        let chinesePart = "";
+
+        if (firstChnIdx !== -1) {
+            let splitPos = firstChnIdx;
+            // 處理前括號歸類到中文 (處理 wear on (時間) 的情況)
+            while (splitPos > 0 && /[\(\[\（]/.test(line[splitPos - 1])) {
+                splitPos--;
+            }
+
+            // 判斷中文在前還是英文在前
+            if (firstChnIdx === 0 || (splitPos === 0)) {
+                const firstEngIdx = line.search(/[a-zA-Z]/);
+                if (firstEngIdx !== -1) {
+                    chinesePart = line.substring(0, firstEngIdx).trim();
+                    englishPart = line.substring(firstEngIdx).trim();
+                }
+            } else {
+                englishPart = line.substring(0, splitPos).trim();
+                chinesePart = line.substring(splitPos).trim();
+            }
+        } else {
+            // 保險機制
+            let splitIdx = line.indexOf(" ");
+            if (splitIdx !== -1) {
+                englishPart = line.substring(0, splitIdx).trim();
+                chinesePart = line.substring(splitIdx).trim();
+            }
+        }
+
+        if (englishPart && chinesePart) {
+            return { w: englishPart, m: chinesePart, stats: stats };
+        }
         return null;
     }
+
+
 
     function getModeRate(item, mode) {
         if (!item.stats || !item.stats[mode] || item.stats[mode].t === 0) return "--";
@@ -708,3 +756,4 @@
 </script>
 </body>
 </html>
+
